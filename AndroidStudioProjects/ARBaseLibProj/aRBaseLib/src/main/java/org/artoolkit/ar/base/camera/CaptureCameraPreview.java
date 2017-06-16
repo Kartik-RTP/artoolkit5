@@ -41,12 +41,14 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -64,6 +66,7 @@ public class CaptureCameraPreview extends SurfaceView implements SurfaceHolder.C
      * Android logging tag for this class.
      */
     private static final String TAG = "CameraPreview";
+
 
     /**
      * The Camera doing the capturing.
@@ -90,6 +93,22 @@ public class CaptureCameraPreview extends SurfaceView implements SurfaceHolder.C
      * Counter to monitor the actual rate at which frames are captured from the camera.
      */
     private FPSCounter fpsCounter = new FPSCounter();
+
+    /**
+     * Action name for local broadcast intent for sending the camera preview data
+     * to other parts of the app where ARbaseLib might be used . This name can be
+     * used for intent filtering
+     */
+
+    private static final String ACTION_SEND_CAMERA_PREVIEW_DATA = "send_camera_preview_data";
+
+    /**
+     * Key for the camera preview data (byte array) for retireval from the local broadcast
+     * sent with the above filtering tag
+     */
+
+    private static final String EXTRA_CAMERA_PREVIEW_DATA = "camera_preview_data";
+
 
     /**
      * Listener to inform of camera related events: start, frame, and stop.
@@ -333,6 +352,8 @@ public class CaptureCameraPreview extends SurfaceView implements SurfaceHolder.C
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
 
+        SendLocalBroadcast(data);
+
         if (listener != null) listener.cameraPreviewFrame(data);
 
         cameraWrapper.frameReceived(data);
@@ -340,5 +361,12 @@ public class CaptureCameraPreview extends SurfaceView implements SurfaceHolder.C
         if (fpsCounter.frame()) {
             Log.i(TAG, "onPreviewFrame(): Camera capture FPS: " + fpsCounter.getFPS());
         }
+    }
+
+    private void SendLocalBroadcast(byte[] data) {
+        Intent intent = new Intent(ACTION_SEND_CAMERA_PREVIEW_DATA);
+        intent.putExtra(EXTRA_CAMERA_PREVIEW_DATA,data);
+        LocalBroadcastManager.getInstance(getContext()).sendBroadcast(intent);
+
     }
 }
